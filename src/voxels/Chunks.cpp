@@ -100,6 +100,10 @@ bool Chunks::isObstacleBlock(int32_t x, int32_t y, int32_t z) {
     return indices.blocks.require(v->id).obstacle;
 }
 
+light_t Chunks::getLight(const glm::ivec3& pos) const {
+    return getLight(pos.x, pos.y, pos.z);
+}
+
 ubyte Chunks::getLight(int32_t x, int32_t y, int32_t z, int channel) const {
     if (y < 0 || y >= CHUNK_H) {
         return 0;
@@ -211,10 +215,11 @@ voxel* Chunks::rayCast(
     glm::vec3& end,
     glm::ivec3& norm,
     glm::ivec3& iend,
-    std::set<blockid_t> filter
+    std::set<blockid_t> filter,
+    bool includeNonSelectable
 ) const {
     return blocks_agent::raycast(
-        *this, start, dir, maxDist, end, norm, iend, std::move(filter)
+        *this, start, dir, maxDist, end, norm, iend, std::move(filter), includeNonSelectable
     );
 }
 
@@ -334,7 +339,8 @@ bool Chunks::putChunk(const std::shared_ptr<Chunk>& chunk) {
 // reduce nesting on next modification
 // 25.06.2024: not now
 // 11.11.2024: not now
-void Chunks::getVoxels(VoxelsVolume& volume, bool backlight) const {
+// 12.12.2025: not now
+void Chunks::getVoxels(VoxelsVolume& volume, bool backlight, int top) const {
     voxel* voxels = volume.getVoxels();
     light_t* lights = volume.getLights();
     int x = volume.getX();
@@ -342,7 +348,7 @@ void Chunks::getVoxels(VoxelsVolume& volume, bool backlight) const {
     int z = volume.getZ();
 
     int w = volume.getW();
-    int h = volume.getH();
+    int h = std::min<int>(volume.getH(), top);
     int d = volume.getD();
 
     int scx = floordiv<CHUNK_W>(x);

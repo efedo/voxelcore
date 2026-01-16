@@ -67,15 +67,6 @@ GUI::GUI(Engine& engine)
 
 GUI::~GUI() = default;
 
-void GUI::setPageLoader(PageLoaderFunc pageLoader) {
-    this->pagesLoader = std::move(pageLoader);
-    menu->setPageLoader(this->pagesLoader);
-}
-
-PageLoaderFunc GUI::getPagesLoader() {
-    return pagesLoader;
-}
-
 std::shared_ptr<Menu> GUI::getMenu() {
     return menu;
 }
@@ -133,17 +124,49 @@ void GUI::actMouse(float delta, const CursorState& cursor) {
 
     auto hover = container->getAt(cursor.pos);
     if (this->hover && this->hover != hover) {
-        this->hover->setHover(false);
+        this->hover->setMouseEnter(false);
     }
     if (hover) {
-        hover->setHover(true);
-
+        if (hover != this->hover) {
+            hover->setMouseEnter(true);
+        }
         int scroll = input.getScroll();
         if (scroll) {
             hover->scrolled(scroll);
         }
     }
     this->hover = hover;
+    auto node = hover;
+
+    while (node) {
+        if (std::find_if(
+                mouseOver.begin(),
+                mouseOver.end(),
+                [&hover](const std::weak_ptr<UINode>& weak) {
+                    auto locked = weak.lock();
+                    return locked && locked == hover;
+                }) != mouseOver.end()) {
+            break;
+        }
+        mouseOver.push_back(node);
+        node->setMouseOver(true);
+        auto parent = node->getParent();
+        if (parent) {
+            node = parent->shared_from_this();
+        }
+    }
+
+    for (auto it = mouseOver.begin(); it != mouseOver.end(); ) {
+        auto node = it->lock();
+        if (node) {
+            if (node->isInside(cursor.pos)) {
+                ++it;
+                continue;
+            }
+            node->setMouseOver(false);
+        }
+        it = mouseOver.erase(it);
+    }
 
     if (input.jclicked(Mousecode::BUTTON_1)) {
         if (pressed == nullptr && this->hover) {
@@ -219,7 +242,7 @@ void GUI::act(float delta, const glm::uvec2& vp) {
         actMouse(delta, cursor);
     } else {
         if (hover) {
-            hover->setHover(false);
+            hover->setMouseEnter(false);
             hover = nullptr;
         }
     }

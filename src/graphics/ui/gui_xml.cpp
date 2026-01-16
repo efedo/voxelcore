@@ -186,6 +186,8 @@ static void read_uinode(
     register_action(node, reader, element, "ondoubleclick", UIAction::DOUBLE_CLICK);
     register_action(node, reader, element, "onmouseover", UIAction::MOUSE_OVER);
     register_action(node, reader, element, "onmouseout", UIAction::MOUSE_OUT);
+    register_action(node, reader, element, "onmouseenter", UIAction::MOUSE_ENTER);
+    register_action(node, reader, element, "onmouseleave", UIAction::MOUSE_LEAVE);
 }
 
 static void read_container_impl(
@@ -307,6 +309,11 @@ static std::shared_ptr<UINode> read_label(
     std::wstring text = parse_inner_text(element, reader.getContext());
     auto label = std::make_shared<Label>(reader.getGUI(), text);
     read_uinode(reader, element, *label);
+    if (element.has("text-align")) {
+        label->setAlign(align_from_string(
+            element.attr("text-align").getText(), label->getAlign()
+        ));
+    }
     if (element.has("valign")) {
         label->setVerticalAlign(align_from_string(
             element.attr("valign").getText(), label->getVerticalAlign()
